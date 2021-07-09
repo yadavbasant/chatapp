@@ -4,37 +4,6 @@ export const APP_ID = "7b02736c7baa4137b523645821bb840c" //process.env.REACT_APP
 
 export enum ChatCmdType {
   chat = 1,
-  gift = 2,
-  beautify = 3,
-  reaction = 4,
-  liveCamera = 5,
-  interact = 6,
-  invitedStream = 7,
-  replay = 8,
-  applause = 9,
-  interactInviteSent = 10,
-  interactInviteAccepted = 11,
-  interactInviteRejected = 12,
-  interactInviteCanceled = 13,
-  interactInviteEnded = 14,
-  checkActiveInteraction = 15,
-  replyToActiveInteraction = 16,
-  raiseHand = 17,
-  enableRaiseHand = 18,
-  muteAudio = 101,
-  unmuteAudio = 102,
-  muteVideo = 103,
-  unmuteVideo = 104,
-  eventEnded = 201,
-  openRoom = 202,
-  closeRoom = 203
-}
-
-
-export interface ChannelBodyParams {
-  account: string
-  recordId: string
-  content: string
 }
 
 export interface ChannelParams {
@@ -47,8 +16,6 @@ export interface NotifyMessageParams {
   data: ChatMessage | UserMessage |  ReplayMessage
   enableHistoricalMessaging?: boolean
 }
-
-
 
 export type ChatMessage = {
   account: string
@@ -66,14 +33,7 @@ export interface UserMessage {
   account: string
   resource: string
   value: number
-}
-
-
-export interface ChatBody {
-  account: string
-  content: string
-}
-
+} 
 export interface PeerMessage {
   uid: string
   userId: string
@@ -243,18 +203,7 @@ export default class AgoraRTMClient {
     return result.hasPeerReceived;
   }
 
-  async sendRecordMessage(data: Partial<ChannelBodyParams>) {
-    const msgData: ReplayMessage = {
-      account: data.account as string,
-      recordId: data.recordId as string,
-    }
-
-    return this.notifyMessage({
-      cmd: ChatCmdType.replay,
-      data: msgData,
-      enableHistoricalMessaging: false
-    })
-  }
+ 
 
   async sendChannelMessage(data: ChannelParams) {
 
