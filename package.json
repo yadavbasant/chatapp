@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@firebase/firestore": "^2.3.7",
+    "agora-rtc-sdk-ng": "^4.5.0",
     "agora-rtm-sdk": "^1.4.3",
     "axios": "^0.21.1",
     "classnames": "^2.2.6",
