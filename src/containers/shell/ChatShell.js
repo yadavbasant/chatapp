@@ -7,10 +7,13 @@ import axios from 'axios';
 import AgoraRTMClient from "../../utils/agora-rtm-client";
 import {jsonParse} from "../../utils/helper";
 import './ChatShell.scss';
+import VideoCall from '../../components/VideoCall/VideoCall';
+
 const rtmClient = new AgoraRTMClient();
+const APP_ID = "379a9b85616a40a99e9e92b61b5a80b0";
 
 const ChatShell = () => {
- 
+    const [enableVideoCall, setEnableVideoCall] = useState(false);
     let conversationBackup = localStorage.getItem("conversations");
     let initCon = [];
     if(conversationBackup && JSON.parse(conversationBackup).length) {
@@ -63,8 +66,7 @@ const ChatShell = () => {
             setCurrentUser({userId : userId, username : result.data.loggedInUserName})
             setUserList(data);
             try {
-                const appId = "7b02736c7baa4137b523645821bb840c";
-                await rtmClient.login(appId, userId.toString(), appId);
+                await rtmClient.login(APP_ID, userId.toString(), APP_ID);
                 subscribeRTMEvent(rtmClient);
                 await rtmClient.join("chatchannel");
             } catch (err) {
@@ -135,7 +137,10 @@ const ChatShell = () => {
                 selectedConversation={selectedUser} />
             <ChatTitle
                 selectedConversation={selectedUser}
-                setSelectedUser={setSelectedUser} />
+                setSelectedUser={setSelectedUser}
+                setEnableVideoCall = {setEnableVideoCall} 
+            />
+            {enableVideoCall && <VideoCall currentUser={currentUser}/>}
             {selectedUser ? conversationContent: 
                 <div className="nouser_selected" >
                     <div>Hi, {currentUser.username}!</div> 

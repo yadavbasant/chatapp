@@ -1,0 +1,41 @@
+@import "../../styles/_colors";
+
+.video_wrapper {
+  height: 200px;
+  position: absolute;
+}
+
+.video_player_section {
+  top: 100px;
+  width: 800px;
+  height: 200px;
+  left: 300px;
+  margin-top: 10px;
+}
+
+.remote {
+  width: 100%;
+}
+
+.remote {
+  height: calc(100vh - 82px);
+}
+
+.left__ScreenUser .two-video {
+  flex: 0 0 50%;
+  max-width: 35%;
+}
+
+.two-video {
+  position: relative;
+  padding: 0;
+}
+
+.left__ScreenUser {
+  height: 100%;
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  position: absolute;
+  left: 22%;
+}

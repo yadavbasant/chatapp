@@ -11,8 +11,7 @@ export class AgoraRtcService {
 
    isChannelJoining = false;
    tokens = {};
-  appId = "7b02736c7baa4137b523645821bb840c";
-
+    appId = "379a9b85616a40a99e9e92b61b5a80b0";
 
    _agora = new EventEmitter();
   constructor(
@@ -182,70 +181,38 @@ export class AgoraRtcService {
       const channelId = `${userDetails.room_id}`;
       let token = this.appId;  //for now taken appId as token, as we dont have token security implemented
       let userId = userDetails.user_id;
-      if (type == 'screen') {
-        userId = userDetails.screen_id;
+      if (!type) {
+        this.setupClientHandlers();
+        if (this.publisher.client) {
+          this.publisher.client.setLowStreamParameter({
+            width: 320,
+            height: 240,
+            framerate: 15,
+            bitrate: 200,
+          });
+          try {
+            console.log("channel Joined with ============================",
+            this.appId,
+              channelId,
+              token, // this.credentials[channelId].token,
+              userId
+            );
+            let uid = await this.publisher.client.join(
+              this.appId,
+              channelId,
+              token, // this.credentials[channelId].token,
+              userId
+            );
+            this.publisher.isJoined = true;
+            this.isChannelJoining = false;
+            return res(uid);
+          } catch (err) {
+            this.publisher.isJoined = false;
+            this.isChannelJoining = false;
+            return rej(err);
+          }
+        }
       }
-      // We need this function when we will implement token security for joining the agora channel
-    //   this.getToken(channelId, userId)
-    //     .then(async (response) => {
-        //   token = response;
-
-          if (!type) {
-            this.setupClientHandlers();
-            if (this.publisher.client) {
-              this.publisher.client.setLowStreamParameter({
-                width: 320,
-                height: 240,
-                framerate: 15,
-                bitrate: 200,
-              });
-              try {
-                let uid = await this.publisher.client.join(
-                  this.appId,
-                  channelId,
-                  token, // this.credentials[channelId].token,
-                  userId
-                );
-                this.publisher.isJoined = true;
-                this.isChannelJoining = false;
-                return res(uid);
-              } catch (err) {
-                this.publisher.isJoined = false;
-                this.isChannelJoining = false;
-                return rej(err);
-              }
-            }
-          }
-          // channel join by screenClient
-          if (type == 'screen' && this.publisher.screenClient) {
-            try {
-              this.registerScreenclientHandler();
-              this.publisher.screenClient.setLowStreamParameter({
-                width: 640,
-                height: 360,
-                framerate: 15,
-                bitrate: 400,
-              });
-              let suid = await this.publisher.screenClient.join(
-                this.appId,
-                channelId,
-                token,
-                userId // screenclient id
-              );
-              this.publisher.isScreenJoined = true;
-              this.isChannelJoining = false;
-              return res(suid);
-            } catch (err) {
-              this.publisher.isScreenJoined = false;
-              this.isChannelJoining = false;
-              return rej(err);
-            }
-          }
-        // })
-        // .catch((err) => {
-        //   this.isChannelJoining = false;
-        //   return rej(err);
-        // });
     });
   }
 
@@ -395,8 +362,8 @@ export class AgoraRtcService {
       }
       if (mediaType === 'audio') {
       }
-      let emitData = { type: 'user-published', user, mediaType };
-      this._agora.emit(emitData);
+      let emitData = { user, mediaType };
+      this._agora.emit("user-published",emitData);
     
   };
 
@@ -408,16 +375,16 @@ export class AgoraRtcService {
     if (mediaType === 'audio') {
       console.log('unsubscribe audio success');
     }
-    let emitData = { type: 'user-unpublished', user, mediaType };
-    this._agora.emit(emitData);
+    let emitData = { user, mediaType };
+    this._agora.emit("user-unpublished",emitData);
   };
 
   onUserJoined = async (user) => {
     console.log("user published", user);
     // triggers when host join the channel
     console.log('user joined ', user);
-    let emitData = { type: 'user-joined', user };
-    this._agora.emit(emitData);
+    let emitData = { user };
+    this._agora.emit("user-joined",emitData);
   };
 
   onUserLeft = async (user, reason) => {
@@ -433,8 +400,8 @@ export class AgoraRtcService {
     if (reason == 'BecomeAudience') {
       // when user become audience from the host
     }
-    let emitData = { type: 'user-left', user, reason };
-    this._agora.emit(emitData);
+    let emitData = { user, reason };
+    this._agora.emit("user-left",emitData);
   };
 
   networkQualityHandler = async (stats) => {
@@ -462,8 +429,8 @@ export class AgoraRtcService {
 
 
   muteUnmutehandler = async (uid, msg) => {
-    let emitData = { type: 'user-info-updated', uid, msg };
-    this._agora.emit(emitData);
+    let emitData = { uid, msg };
+    this._agora.emit("user-info-updated",emitData);
   };
 
   unregisterCallbacks() {

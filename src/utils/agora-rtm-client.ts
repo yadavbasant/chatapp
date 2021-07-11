@@ -1,6 +1,5 @@
 import AgoraRTM from 'agora-rtm-sdk';
 import EventEmitter from 'events';
-export const APP_ID = "7b02736c7baa4137b523645821bb840c" //process.env.REACT_APP_AGORA_APP_ID as string;
 
 export enum ChatCmdType {
   chat = 1,
@@ -97,7 +96,8 @@ export default class AgoraRTMClient {
   async login (appID: string, uid: string, token?: string) {
     const rtmClient = AgoraRTM.createInstance(appID);
     try {
-      await rtmClient.login({uid, token});
+      //as
+      await rtmClient.login({uid});
       rtmClient.on("ConnectionStateChanged", (newState: string, reason: string) => {
         this._bus.emit("ConnectionStateChanged", {newState, reason});
       });
