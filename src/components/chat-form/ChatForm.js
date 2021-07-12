@@ -31,7 +31,7 @@ const ChatForm = ({ selectedConversation, userId, rtmClient, conversations, upda
     
         handleFormSubmit = (e) => {
             e.preventDefault();
-            const msgBody = {msg: textMessage, senderTitle: currentUser.username}
+            const msgBody = {type: "chat_message", msg: textMessage, senderTitle: currentUser.username}
             rtmClient.sendPeerMessage(selectedConversation.peopleid.toString(), msgBody)
             const currentDate = new Date();
             const messageRow = {

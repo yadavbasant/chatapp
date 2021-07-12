@@ -4,9 +4,8 @@ import { AgoraRtcService } from '../../utils/agora-rtc.services';
 
 
 const VideoCall = ({ currentUser }) => {
-  console.log("==================current user", currentUser);
-  const [textMessage, setTextMessage] = useState('');
   const [remoteCalls, setRemoteCalls] = useState([]);
+  const [ muteUnmuteStatus, setMuteUnmuteStatus ] = useState({ muteAudio: false, muteVideo: false });
   const agoraRTC = new AgoraRtcService();
   const GOOD_RESOLUTION_USER_LIMIT = 5;
   const isAudioEnabled = true;
@@ -253,10 +252,56 @@ const VideoCall = ({ currentUser }) => {
     });
   }
 
+  const muteAudio = async () => {
+    if (agoraRTC.publisher.tracks.audioActionInProgress) {
+      return
+    }
+    agoraRTC.publisher.tracks.audioActionInProgress = true;
+    await agoraRTC.publisher.tracks.audio.setEnabled(false)
+    muteUnmuteStatus.muteAudio = true;
+    setMuteUnmuteStatus(muteUnmuteStatus);
+    agoraRTC.publisher.tracks.audioActionInProgress = false;
+  }
+
+  const unMuteAudio = async () => {
+    if (agoraRTC.publisher.tracks.audioActionInProgress) {
+      return
+    }
+    agoraRTC.publisher.tracks.audioActionInProgress = true;
+    await agoraRTC.publisher.tracks.audio.setEnabled(true)
+    muteUnmuteStatus.muteAudio = false;
+    setMuteUnmuteStatus(muteUnmuteStatus);
+    agoraRTC.publisher.tracks.audioActionInProgress = false;
+  }
+
+  const muteVideo = async () => {
+    if (agoraRTC.publisher.tracks.videoActionInProgress) {
+      return
+    }
+    agoraRTC.publisher.tracks.videoActionInProgress = true;
+    await agoraRTC.publisher.tracks.video.setEnabled(false)
+    muteUnmuteStatus.muteVideo = true;
+    setMuteUnmuteStatus(muteUnmuteStatus);
+    agoraRTC.publisher.tracks.videoActionInProgress = false;
+  }
+
+  const unMuteVideo = async () => {
+    if (agoraRTC.publisher.tracks.videoActionInProgress) {
+      return
+    }
+    agoraRTC.publisher.tracks.videoActionInProgress = true;
+    
+    await agoraRTC.publisher.tracks.video.setEnabled(true);
+    muteUnmuteStatus.muteVideo = false;
+    setMuteUnmuteStatus(muteUnmuteStatus);
+    agoraRTC.publisher.tracks.videoActionInProgress = false;
+  }
+
   return (
     <div className="left__ScreenUser" >
       
       {remoteCalls.map((item) => {
+        console.log("===============================mutestatus", muteUnmuteStatus);
           return (
 
             <div className="mb-30 two-video col-md-6" key= {item.divId}>
@@ -267,6 +312,13 @@ const VideoCall = ({ currentUser }) => {
           )
         })
       }
+      <div className="control_buttons" >
+        {!muteUnmuteStatus.muteAudio && <button onClick={ ()=>{ muteAudio() } } className = "btns">Mute Audio</button>}
+        {muteUnmuteStatus.muteAudio && <button onClick={ ()=>{ unMuteAudio() } } className = "btns">UnMute Video</button>}
+        {!muteUnmuteStatus.muteVideo && <button onClick={ ()=>{ muteVideo() } } className = "btns">Mute Audio</button>}
+        {muteUnmuteStatus.muteVideo && <button onClick={ ()=>{ unMuteVideo() } } className = "btns">UnMute Video</button>}
+        <button onClick={ ()=>{ unMuteVideo() } } className = "btns">Leave Call</button>
+      </div>
     </div>
   );
 }

@@ -197,7 +197,6 @@ export default class AgoraRTMClient {
   }
 
   async sendPeerMessage(peerId: string, body: MessageBody) {
-    // resolveMessage(peerId, body);
     console.log("[rtm-client] send peer message ", peerId, JSON.stringify(body));
     let result = await this._client.sendMessageToPeer({text: JSON.stringify(body)}, peerId, {enableHistoricalMessaging: true});
     return result.hasPeerReceived;

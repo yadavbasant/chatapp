@@ -14,6 +14,7 @@ const APP_ID = "379a9b85616a40a99e9e92b61b5a80b0";
 
 const ChatShell = () => {
     const [enableVideoCall, setEnableVideoCall] = useState(false);
+    const [incomingCallUser, setIncomingCallUser] = useState(null);
     let conversationBackup = localStorage.getItem("conversations");
     let initCon = [];
     if(conversationBackup && JSON.parse(conversationBackup).length) {
@@ -83,30 +84,47 @@ const ChatShell = () => {
         rtmClient.on(
             "MessageFromPeer",
             ({peerId, message}) => {
-                const {msg, senderTitle} = jsonParse(message.text);
+                const {type} = jsonParse(message.text);
                 console.log("===================================", jsonParse(message.text));
                 console.log("[agora-web] MessageFromPeer","peer_"+peerId, message.text);
-                const currentDate = new Date();
-                const messageRow = {
-                    message: msg,
-                    senderId: parseInt(peerId), 
-                    senderTitle: senderTitle,
-                    image: "",
-                    receiverId: parseInt(userId), 
-                    createdAt: currentDate.getTime()
+                if( type == 'chat_message' ) {
+                    const {msg, senderTitle} = jsonParse(message.text);
+                    const currentDate = new Date();
+                    const messageRow = {
+                        message: msg,
+                        senderId: parseInt(peerId), 
+                        senderTitle: senderTitle,
+                        image: "",
+                        receiverId: parseInt(userId), 
+                        createdAt: currentDate.getTime()
+                    }
+                    
+                    let conversationBackup = localStorage.getItem("conversations");
+                    console.log("==================from localstorage", conversationBackup);
+                    let initCon = [];
+                    if(conversationBackup && JSON.parse(conversationBackup).length) {
+                        initCon = JSON.parse(conversationBackup)
+                    }
+                    updateConversations([...initCon, messageRow]);
+                    console.log("==========================after receiving", [...initCon, messageRow]);
+                    localStorage.setItem("conversations", JSON.stringify([...initCon, messageRow]));
+                } else if(type == 'call_message') {
+                    const { callerTitle } = jsonParse(message.text);
+                    setIncomingCallUser({userId: peerId, title: callerTitle});
                 }
-                
-                let conversationBackup = localStorage.getItem("conversations");
-                console.log("==================from localstorage", conversationBackup);
-                let initCon = [];
-                if(conversationBackup && JSON.parse(conversationBackup).length) {
-                    initCon = JSON.parse(conversationBackup)
-                }
-                updateConversations([...initCon, messageRow]);
-                console.log("==========================after receiving", [...initCon, messageRow]);
-                localStorage.setItem("conversations", JSON.stringify([...initCon, messageRow]));
+            
             }
         );
+    }
+
+    const acceptCall = () => {
+        const callingUser = userList.filter(item => item.peopleid == incomingCallUser.userId)
+        setIncomingCallUser(null)
+        onChatUserSelected(callingUser[0])
+        setEnableVideoCall(true)
+    }
+    const rejectCall = () => {
+        setIncomingCallUser(null)
     }
 
     const onChatUserSelected = (user) => {
@@ -137,9 +155,18 @@ const ChatShell = () => {
                 selectedConversation={selectedUser} />
             <ChatTitle
                 selectedConversation={selectedUser}
-                setSelectedUser={setSelectedUser}
+                setSelectedUser={onChatUserSelected}
                 setEnableVideoCall = {setEnableVideoCall} 
+                rtmClient={rtmClient}
+                currentUser = {currentUser}
             />
+            { incomingCallUser  && 
+                <div className="incoming_call_model" >
+                    Hey User { incomingCallUser.title } is calling you
+                    <button onClick={ () => { acceptCall() } } >Accept</button>
+                    <button onClick={ () => { rejectCall() } } >Reject</button>
+                </div>
+            }
             {enableVideoCall && <VideoCall currentUser={currentUser}/>}
             {selectedUser ? conversationContent: 
                 <div className="nouser_selected" >
