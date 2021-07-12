@@ -2,18 +2,18 @@ import EventEmitter from 'events';
 import AgoraRTC from 'agora-rtc-sdk-ng';
 
 export class AgoraRtcService {
-   credentials= null;
-   setupDone;
+  credentials = null;
+  setupDone;
 
-   publisher;
-   audioDevices= [];
-   videoDevices= [];
+  publisher;
+  audioDevices = [];
+  videoDevices = [];
 
-   isChannelJoining = false;
-   tokens = {};
-    appId = "379a9b85616a40a99e9e92b61b5a80b0";
+  isChannelJoining = false;
+  tokens = {};
+  appId = "379a9b85616a40a99e9e92b61b5a80b0";
 
-   _agora = new EventEmitter();
+  _agora = new EventEmitter();
   constructor(
   ) {
     this.publisher = {
@@ -47,63 +47,6 @@ export class AgoraRtcService {
       .then(() => console.log('DUAL STREAM ENABLED'))
       .catch(() => console.log('DUAL STREAM UNAVAILABLE'));
     return new Promise((res) => res(this.publisher.client));
-  }
-
-  async stopScreenShare() {
-    await this.unpublishScreenTrack();
-    setTimeout(async () => {
-      await this.leave('screen');
-    }, 1000);
-  }
-
-  createScreenClient() {
-    return Promise.resolve(
-      AgoraRTC.createClient({
-        mode: 'rtc',
-        codec: 'vp8',
-      })
-    );
-  }
-
-  async publishScreenTrack() {
-    return new Promise(async (res, rej) => {
-      if (this.publisher.client.remoteUsers.length < 17) {
-        if (!this.publisher.tracks.screenTrack) {
-          AgoraRTC.createScreenVideoTrack({
-            encoderConfig: '1080p_1',
-          })
-            .then(async (track) => {
-              this.publisher.tracks.screenTrack = track;
-              this.setupTrackHandlers();
-              await this.publisher.screenClient.publish([
-                this.publisher.tracks.screenTrack,
-              ]);
-
-              res(track);
-            })
-            .catch((err) => {
-              rej(err);
-            });
-        } else {
-          await this.publisher.screenClient.publish([
-            this.publisher.tracks.screenTrack,
-          ]);
-          res(this.publisher.tracks.screenTrack);
-        }
-      } else {
-        rej(false);
-      }
-    });
-  }
-
-  async unpublishScreenTrack() {
-    if (this.publisher.tracks.screenTrack) {
-      await this.publisher.screenClient.unpublish([
-        this.publisher.tracks.screenTrack,
-      ]);
-      this.unregisterTrackHandlers();
-    }
-    this.publisher.tracks.screenTrack = null;
   }
 
   async createAudioTrack(deviceId) {
@@ -159,20 +102,9 @@ export class AgoraRtcService {
     });
   }
 
-  async createBothTracks() {
-    const [
-      microphoneTrack,
-      cameraTrack,
-    ] = await AgoraRTC.createMicrophoneAndCameraTracks();
-    cameraTrack.stop();
-    cameraTrack.stop();
-    this.publisher.tracks.video = cameraTrack;
-    this.publisher.tracks.audio = microphoneTrack;
-  }
-
   // type : screen/''
   join(type, userDetails) {
-    return new Promise( async (res, rej) => {
+    return new Promise(async (res, rej) => {
       // just join the channel
       if (this.isChannelJoining) {
         return rej(false);
@@ -191,12 +123,6 @@ export class AgoraRtcService {
             bitrate: 200,
           });
           try {
-            console.log("channel Joined with ============================",
-            this.appId,
-              channelId,
-              token, // this.credentials[channelId].token,
-              userId
-            );
             let uid = await this.publisher.client.join(
               this.appId,
               channelId,
@@ -217,16 +143,10 @@ export class AgoraRtcService {
   }
 
   async leave(type) {
-    if (type === 'screen') {
-      await this.publisher.screenClient.leave();
-      this.publisher.isScreenJoined = false;
-      this.unregisterScreenclientHandler();
-    } else {
-      await this.publisher.client.leave();
-      await this.publisher.client.setClientRole('audience');
-      this.publisher.isJoined = false;
-      this.unregisterCallbacks();
-    }
+    await this.publisher.client.leave();
+    await this.publisher.client.setClientRole('audience');
+    this.publisher.isJoined = false;
+    this.unregisterCallbacks();
   }
 
   // if type is not specified publish both the tracks
@@ -298,44 +218,12 @@ export class AgoraRtcService {
     });
   }
 
-  getRemoteNetworkQuality() {
-    return this.publisher.client.getRemoteNetworkQuality();
-  }
-
   upgradeUserRole() {
     this.publisher.client.setClientRole('host');
   }
 
   downgradeUserRole() {
     this.publisher.client.setClientRole('audience');
-  }
-
-  switchVideoDevice(deviceId) {
-    this.publisher.tracks.videoId = deviceId;
-    if (this.publisher.tracks.video) {
-      this.publisher.tracks.video
-        .setDevice(deviceId)
-        .then(() => {
-          console.log('set device success');
-        })
-        .catch((e) => {
-          console.log('set device error', e);
-        });
-    }
-  }
-
-  switchAudioDevice(deviceId) {
-    this.publisher.tracks.audioId = deviceId;
-    if (this.publisher.tracks.audio) {
-      this.publisher.tracks.audio
-        .setDevice(deviceId)
-        .then(() => {
-          console.log('set device success');
-        })
-        .catch((e) => {
-          console.log('set device error', e);
-        });
-    }
   }
 
   setRemoteStreamType(userId, type) {
@@ -353,18 +241,18 @@ export class AgoraRtcService {
 
   onUserPublished = async (user, mediaType) => {
     const uid = user.uid;
-    console.log("user published",mediaType, user);
-    
-      await this.publisher.client.subscribe(user, mediaType);
-      // await this.publisher.client.setStreamFallbackOption(uid, 1);
-      if (mediaType === 'video') {
-        this.setRemoteStreamType(uid, 'low');
-      }
-      if (mediaType === 'audio') {
-      }
-      let emitData = { user, mediaType };
-      this._agora.emit("user-published",emitData);
-    
+    console.log("user published", mediaType, user);
+
+    await this.publisher.client.subscribe(user, mediaType);
+    // await this.publisher.client.setStreamFallbackOption(uid, 1);
+    if (mediaType === 'video') {
+      this.setRemoteStreamType(uid, 'low');
+    }
+    if (mediaType === 'audio') {
+    }
+    let emitData = { user, mediaType };
+    this._agora.emit("user-published", emitData);
+
   };
 
   onUserUnpublished = async (user, mediaType) => {
@@ -376,7 +264,7 @@ export class AgoraRtcService {
       console.log('unsubscribe audio success');
     }
     let emitData = { user, mediaType };
-    this._agora.emit("user-unpublished",emitData);
+    this._agora.emit("user-unpublished", emitData);
   };
 
   onUserJoined = async (user) => {
@@ -384,7 +272,7 @@ export class AgoraRtcService {
     // triggers when host join the channel
     console.log('user joined ', user);
     let emitData = { user };
-    this._agora.emit("user-joined",emitData);
+    this._agora.emit("user-joined", emitData);
   };
 
   onUserLeft = async (user, reason) => {
@@ -401,36 +289,12 @@ export class AgoraRtcService {
       // when user become audience from the host
     }
     let emitData = { user, reason };
-    this._agora.emit("user-left",emitData);
+    this._agora.emit("user-left", emitData);
   };
-
-  networkQualityHandler = async (stats) => {
-    // network stats
-    let emitData = { type: 'network-quality', stats };
-    this._agora.emit(emitData);
-  };
-
-  screenNetworkQualityHandler = (stats) => {
-    // network stats
-    let emitData = { type: 'network-quality', stats };
-    this._agora.emit(emitData);
-  };
-
-  volumeIndicatorHandler = async (result) => {
-    let emitData = { type: 'volume-indicator', result };
-    this._agora.emit(emitData);
-  };
-
-  connectionStateChange = async (curState, revState, reason) => {
-    let result = {curState, revState, reason}
-    let emitData = { type: 'connection-state-change', result};
-    this._agora.emit(emitData);
-  };
-
 
   muteUnmutehandler = async (uid, msg) => {
     let emitData = { uid, msg };
-    this._agora.emit("user-info-updated",emitData);
+    this._agora.emit("user-info-updated", emitData);
   };
 
   unregisterCallbacks() {
@@ -438,38 +302,15 @@ export class AgoraRtcService {
     this.publisher.client.off('user-unpublished', this.onUserUnpublished);
     this.publisher.client.off('user-joined', this.onUserJoined);
     this.publisher.client.off('user-left', this.onUserLeft);
-    this.publisher.client.off('network-quality', this.networkQualityHandler);
-    this.publisher.client.off('volume-indicator', this.volumeIndicatorHandler);
     this.publisher.client.off('user-info-updated', this.muteUnmutehandler);
   }
 
   setupClientHandlers() {
-    this.publisher.client.enableAudioVolumeIndicator();
     this.publisher.client.on('user-published', this.onUserPublished);
     this.publisher.client.on('user-unpublished', this.onUserUnpublished);
     this.publisher.client.on('user-joined', this.onUserJoined);
     this.publisher.client.on('user-left', this.onUserLeft);
-    this.publisher.client.on('network-quality', this.networkQualityHandler);
-    this.publisher.client.on('volume-indicator', this.volumeIndicatorHandler);
     this.publisher.client.on('user-info-updated', this.muteUnmutehandler);
-    this.publisher.client.on(
-      'connection-state-change',
-      this.connectionStateChange
-    );
-  }
-
-  registerScreenclientHandler() {
-    this.publisher.client.on(
-      'network-quality',
-      this.screenNetworkQualityHandler
-    );
-  }
-
-  unregisterScreenclientHandler() {
-    this.publisher.client.off(
-      'network-quality',
-      this.screenNetworkQualityHandler
-    );
   }
 
   setupTrackHandlers() {
@@ -483,13 +324,6 @@ export class AgoraRtcService {
       this.publisher.tracks.screenTrack.off('track-ended', this.trackHandler);
     }
   }
-
-  trackHandler = () => {
-    const emmitData = {
-      type: 'screen-share-sttoped',
-    };
-    this._agora.emit(emmitData);
-  };
 
   getDevices() {
     AgoraRTC.getDevices().then(
@@ -506,20 +340,8 @@ export class AgoraRtcService {
           let emitData = { type: 'DEVICE_PERMISSION_DENIED' };
           this._agora.emit(emitData);
         }
-        console.log("get device permisison denied",error);
+        console.log("get device permisison denied", error);
       }
     );
-  }
-
-  // it may be used when we implement the token security later
-  getToken(channelId, userId) {
-    // return new Promise((res, rej) => {
-    //   return this._httpService
-    //     .getAgoraToken(channelId, userId)
-    //     .then((token) => {
-    //       return res(token);
-    //     })
-    //     .catch((err) => rej(err));
-    // });
   }
 }
