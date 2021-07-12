@@ -15,6 +15,8 @@ const APP_ID = "379a9b85616a40a99e9e92b61b5a80b0";
 const ChatShell = () => {
     const [enableVideoCall, setEnableVideoCall] = useState(false);
     const [incomingCallUser, setIncomingCallUser] = useState(null);
+    const [channelName, setChannelName] = useState("");
+
     let conversationBackup = localStorage.getItem("conversations");
     let initCon = [];
     if(conversationBackup && JSON.parse(conversationBackup).length) {
@@ -85,7 +87,6 @@ const ChatShell = () => {
             "MessageFromPeer",
             ({peerId, message}) => {
                 const {type} = jsonParse(message.text);
-                console.log("===================================", jsonParse(message.text));
                 console.log("[agora-web] MessageFromPeer","peer_"+peerId, message.text);
                 if( type == 'chat_message' ) {
                     const {msg, senderTitle} = jsonParse(message.text);
@@ -100,16 +101,15 @@ const ChatShell = () => {
                     }
                     
                     let conversationBackup = localStorage.getItem("conversations");
-                    console.log("==================from localstorage", conversationBackup);
                     let initCon = [];
                     if(conversationBackup && JSON.parse(conversationBackup).length) {
                         initCon = JSON.parse(conversationBackup)
                     }
                     updateConversations([...initCon, messageRow]);
-                    console.log("==========================after receiving", [...initCon, messageRow]);
                     localStorage.setItem("conversations", JSON.stringify([...initCon, messageRow]));
                 } else if(type == 'call_message') {
-                    const { callerTitle } = jsonParse(message.text);
+                    const { callerTitle, channelName } = jsonParse(message.text);
+                    setChannelName(channelName);
                     setIncomingCallUser({userId: peerId, title: callerTitle});
                 }
             
@@ -145,6 +145,7 @@ const ChatShell = () => {
             </div>
         )
     }
+    
 
     return (
         <div id="chat-container">
@@ -159,6 +160,7 @@ const ChatShell = () => {
                 setEnableVideoCall = {setEnableVideoCall} 
                 rtmClient={rtmClient}
                 currentUser = {currentUser}
+                setChannelName = {setChannelName}
             />
             { incomingCallUser  && 
                 <div className="incoming_call_model" >
@@ -167,7 +169,13 @@ const ChatShell = () => {
                     <button onClick={ () => { rejectCall() } } >Reject</button>
                 </div>
             }
-            {enableVideoCall && <VideoCall currentUser={currentUser}/>}
+            {enableVideoCall && 
+                <VideoCall 
+                    currentUser={currentUser}
+                    setEnableVideoCall = {setEnableVideoCall}
+                    channelName={channelName}
+                />
+            }
             {selectedUser ? conversationContent: 
                 <div className="nouser_selected" >
                     <div>Hi, {currentUser.username}!</div> 

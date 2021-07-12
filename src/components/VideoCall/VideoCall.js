@@ -3,15 +3,15 @@ import './VideoCall.scss';
 import { AgoraRtcService } from '../../utils/agora-rtc.services';
 
 
-const VideoCall = ({ currentUser }) => {
+const VideoCall = ({ currentUser, setEnableVideoCall, channelName }) => {
   const [remoteCalls, setRemoteCalls] = useState([]);
-  const [ muteUnmuteStatus, setMuteUnmuteStatus ] = useState({ muteAudio: false, muteVideo: false });
+  const [muteAudio, setMuteAudio] = useState(false);
+  const [muteVideo, setMuteVideo] = useState(false);
   const agoraRTC = new AgoraRtcService();
-  const GOOD_RESOLUTION_USER_LIMIT = 5;
   const isAudioEnabled = true;
   const isVideoEnabled = true;
   const uid = currentUser.userId;
-  const userDetails = { user_id: uid, room_id: "test1" };
+  const userDetails = { user_id: uid, room_id: channelName };
 
   useEffect(() => {
     async function initRtc() {
@@ -23,9 +23,9 @@ const VideoCall = ({ currentUser }) => {
           startVideoCall().then(() => {
             startAudioCall().then(() => {
             })
-              .catch((err) => {
-                console.log(err, 'Audio track is not created!');
-              })
+            .catch((err) => {
+              console.log(err, 'Audio track is not created!');
+            })
           })
             .catch((err) => {
               console.log(err, 'Video track is not created!');
@@ -88,26 +88,10 @@ const VideoCall = ({ currentUser }) => {
     })
 
     agoraRTC._agora.on("user-unpublished", (event) => {
-      console.log("user unpublished successfully", event);
-      remoteCalls.forEach((stream) => {
-        if (stream.id == event.uid) {
-          if (event.msg == "mute-audio") {
-            stream.remoteAudioMuted = true;
-          } else if (event.msg == "unmute-audio") {
-            stream.remoteAudioMuted = false;
-          } else if (event.msg == "mute-video") {
-            stream.remoteVideoMuted = true;
-          } else if (event.msg == "unmute-video") {
-            stream.remoteVideoMuted = false;
-          }
-        }
-      });
-      setRemoteCalls(remoteCalls);
     })
 
     agoraRTC._agora.on("user-left", (event) => {
       console.log("user left successfully", event);
-      // removeRemoteUser(event);
     })
   }
 
@@ -119,7 +103,6 @@ const VideoCall = ({ currentUser }) => {
     agoraRTC
       .publish('audio')
       .then(() => {
-        // isAudioEnabled = true;
         const userDetails = {
           mediaType: 'audio',
           user: {
@@ -145,8 +128,6 @@ const VideoCall = ({ currentUser }) => {
     agoraRTC
       .publish('video')
       .then(() => {
-        // isVideoEnabled = true;
-
         const userDetails = {
           mediaType: 'video',
           user: {
@@ -167,12 +148,8 @@ const VideoCall = ({ currentUser }) => {
   const addRemoteUser = async (remote, isLocalTrack = false) => {
     const remoteUser = remote.user;
     let userId = remoteUser.uid;
-
-    let userName = "Basant"
     // Subscribe to low quality stream under poor network connection
     agoraRTC.publisher.client.setStreamFallbackOption(userId, 1);
-    let title = "title"
-    let role = "host"
 
     let remoteUserData = remoteCalls.find(
       (item) => item.id == remoteUser.uid
@@ -182,14 +159,9 @@ const VideoCall = ({ currentUser }) => {
       const data = {
         id: userId,
         divId: 'agora_remote-' + userId,
-        name: userName,
-        title: title,
-        userRole: role,
         remoteAudioMuted: !remoteUser.hasAudio,
         remoteVideoMuted: !remoteUser.hasVideo,
         isLocalStream: isLocalTrack,
-        speaking: false,
-        nameInitials: "AA",
         isLoading: false,
         peerId: remoteUser.uid,
         userId: remoteUser.uid,
@@ -206,15 +178,9 @@ const VideoCall = ({ currentUser }) => {
       remoteUserData.videoStream = remoteUser.videoTrack ?? remoteUserData.videoStream;
       remoteUserData.audioStream = remoteUser.audioTrack ?? remoteUserData.audioStream;
     }
-    if (remoteCalls.length > GOOD_RESOLUTION_USER_LIMIT) {
-      //   setRemoteStreamLower();
-    }
-    console.log("remotecalls before mute/unmute", remoteCalls);
-    console.log(remote.mediaType, remoteUser.hasVideo,"=======jiya1");
+
     if (remote.mediaType == 'video' && remoteUser.hasVideo) {
       remoteCalls.forEach((user) => {
-        console.log(user.id, remoteUser.uid, user.remoteVideoMuted,"=======jiya");
-        // && !user.remoteVideoMuted
         if (user.id == remoteUser.uid) {
           checkElementExistent(user.divId).then((ele) => {
             setTimeout(() => {
@@ -226,7 +192,6 @@ const VideoCall = ({ currentUser }) => {
     }
     if (remote.mediaType == 'audio' && remoteUser.hasAudio) {
       remoteCalls.forEach((user) => {
-        // && !user.remoteAudioMuted
         if (user.id == remoteUser.uid ) {
           if (user.id != uid) {
             user.audioStream.play();
@@ -252,58 +217,39 @@ const VideoCall = ({ currentUser }) => {
     });
   }
 
-  const muteAudio = async () => {
-    if (agoraRTC.publisher.tracks.audioActionInProgress) {
-      return
-    }
-    agoraRTC.publisher.tracks.audioActionInProgress = true;
-    await agoraRTC.publisher.tracks.audio.setEnabled(false)
-    muteUnmuteStatus.muteAudio = true;
-    setMuteUnmuteStatus(muteUnmuteStatus);
-    agoraRTC.publisher.tracks.audioActionInProgress = false;
+  const muteAudioTrack = async () => {
+    const localStream = remoteCalls.filter(item => item.id == currentUser.userId)
+    await localStream[0].audioStream.setEnabled(false)
+    setMuteAudio(!muteAudio);
   }
 
-  const unMuteAudio = async () => {
-    if (agoraRTC.publisher.tracks.audioActionInProgress) {
-      return
-    }
-    agoraRTC.publisher.tracks.audioActionInProgress = true;
-    await agoraRTC.publisher.tracks.audio.setEnabled(true)
-    muteUnmuteStatus.muteAudio = false;
-    setMuteUnmuteStatus(muteUnmuteStatus);
-    agoraRTC.publisher.tracks.audioActionInProgress = false;
+  const unMuteAudioTrack = async () => {
+    const localStream = remoteCalls.filter(item => item.id == currentUser.userId)
+    await localStream[0].audioStream.setEnabled(true)
+    setMuteAudio(!muteAudio);
   }
 
-  const muteVideo = async () => {
-    if (agoraRTC.publisher.tracks.videoActionInProgress) {
-      return
-    }
-    agoraRTC.publisher.tracks.videoActionInProgress = true;
-    await agoraRTC.publisher.tracks.video.setEnabled(false)
-    muteUnmuteStatus.muteVideo = true;
-    setMuteUnmuteStatus(muteUnmuteStatus);
-    agoraRTC.publisher.tracks.videoActionInProgress = false;
+  const muteVideoTrack = async () => {
+    const localStream = remoteCalls.filter(item => item.id == currentUser.userId)
+    await localStream[0].videoStream.setEnabled(false)
+    setMuteVideo(!muteVideo);
   }
 
-  const unMuteVideo = async () => {
-    if (agoraRTC.publisher.tracks.videoActionInProgress) {
-      return
-    }
-    agoraRTC.publisher.tracks.videoActionInProgress = true;
-    
-    await agoraRTC.publisher.tracks.video.setEnabled(true);
-    muteUnmuteStatus.muteVideo = false;
-    setMuteUnmuteStatus(muteUnmuteStatus);
-    agoraRTC.publisher.tracks.videoActionInProgress = false;
+  const unMuteVideoTrack = async () => {
+    const localStream = remoteCalls.filter(item => item.id == currentUser.userId)
+    await localStream[0].videoStream.setEnabled(true);
+    setMuteVideo(!muteVideo);
+  }
+
+  const leaveCall = () => {
+    setEnableVideoCall(false);
   }
 
   return (
     <div className="left__ScreenUser" >
       
       {remoteCalls.map((item) => {
-        console.log("===============================mutestatus", muteUnmuteStatus);
           return (
-
             <div className="mb-30 two-video col-md-6" key= {item.divId}>
               <div className="remote" id={item.divId}>
                 
@@ -313,11 +259,11 @@ const VideoCall = ({ currentUser }) => {
         })
       }
       <div className="control_buttons" >
-        {!muteUnmuteStatus.muteAudio && <button onClick={ ()=>{ muteAudio() } } className = "btns">Mute Audio</button>}
-        {muteUnmuteStatus.muteAudio && <button onClick={ ()=>{ unMuteAudio() } } className = "btns">UnMute Video</button>}
-        {!muteUnmuteStatus.muteVideo && <button onClick={ ()=>{ muteVideo() } } className = "btns">Mute Audio</button>}
-        {muteUnmuteStatus.muteVideo && <button onClick={ ()=>{ unMuteVideo() } } className = "btns">UnMute Video</button>}
-        <button onClick={ ()=>{ unMuteVideo() } } className = "btns">Leave Call</button>
+        {!muteAudio && <button onClick={ ()=>{ muteAudioTrack() } } className = "btns">Mute Audio</button>}
+        {muteAudio && <button onClick={ ()=>{ unMuteAudioTrack() } } className = "btns">UnMute Audio</button>}
+        {!muteVideo && <button onClick={ ()=>{ muteVideoTrack() } } className = "btns">Mute Video</button>}
+        {muteVideo && <button onClick={ ()=>{ unMuteVideoTrack() } } className = "btns">UnMute Video</button>}
+        <button onClick={ ()=>{ leaveCall() } } className = "btns">Leave Call</button>
       </div>
     </div>
   );

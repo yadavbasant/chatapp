@@ -4,11 +4,7 @@ import AgoraRTC from 'agora-rtc-sdk-ng';
 export class AgoraRtcService {
   credentials = null;
   setupDone;
-
   publisher;
-  audioDevices = [];
-  videoDevices = [];
-
   isChannelJoining = false;
   tokens = {};
   appId = "379a9b85616a40a99e9e92b61b5a80b0";
@@ -32,7 +28,6 @@ export class AgoraRtcService {
       isJoined: false,
       isScreenJoined: false,
     };
-    this.getDevices();
     this.setupDone = false;
   }
 
@@ -49,13 +44,10 @@ export class AgoraRtcService {
     return new Promise((res) => res(this.publisher.client));
   }
 
-  async createAudioTrack(deviceId) {
+  async createAudioTrack() {
     return new Promise((res, rej) => {
-      if (!deviceId) {
-        deviceId = this.audioDevices[0].deviceId;
-      }
+
       AgoraRTC.createMicrophoneAudioTrack({
-        microphoneId: deviceId,
         AEC: true, // acoustic echo cancellation
         AGC: true, // audio gain control
         ANS: true, // automatic noise suppression
@@ -64,7 +56,6 @@ export class AgoraRtcService {
         .then((track) => {
           this.publisher.client.setClientRole('host');
           this.publisher.tracks.audioVolume = 100;
-          this.publisher.tracks.audioId = deviceId;
           this.publisher.tracks.audio = track;
           this.publisher.tracks.audio.setEnabled(true);
           res(true);
@@ -75,20 +66,15 @@ export class AgoraRtcService {
     });
   }
 
-  createVideoTrack(deviceId) {
+  createVideoTrack() {
     return new Promise((res, rej) => {
       if (!this.publisher.tracks.video) {
-        if (!deviceId) {
-          deviceId = this.videoDevices[0].deviceId;
-        }
         AgoraRTC.createCameraVideoTrack({
-          cameraId: deviceId,
           encoderConfig: '720p',
           optimizationMode: 'detail',
         })
           .then((track) => {
             this.publisher.client.setClientRole('host');
-            this.publisher.tracks.videoId = deviceId;
             this.publisher.tracks.video = track;
             this.publisher.tracks.video.setEnabled(true);
             res(true);
@@ -323,25 +309,5 @@ export class AgoraRtcService {
     if (this.publisher.tracks.screenTrack) {
       this.publisher.tracks.screenTrack.off('track-ended', this.trackHandler);
     }
-  }
-
-  getDevices() {
-    AgoraRTC.getDevices().then(
-      (devices) => {
-        this.audioDevices = devices.filter((x) => x.kind == 'audioinput');
-        this.videoDevices = devices.filter((x) => x.kind == 'videoinput');
-        let emitData = { type: 'DEVICE_OBTAINED' };
-        setTimeout(() => {
-          this._agora.emit(emitData);
-        }, 1000);
-      },
-      (error) => {
-        if (error.code === 'PERMISSION_DENIED') {
-          let emitData = { type: 'DEVICE_PERMISSION_DENIED' };
-          this._agora.emit(emitData);
-        }
-        console.log("get device permisison denied", error);
-      }
-    );
   }
 }
